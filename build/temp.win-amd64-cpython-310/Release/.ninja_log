@@ -1,0 +1,3 @@
+# ninja log v7
+23	8597	7967546958554527	E:/cuda/build/temp.win-amd64-cpython-310/Release/cuda_ext/fused_conv_relu_pool_bindings.obj	42b89a45846967d2
+14	27545	7967546958477347	E:/cuda/build/temp.win-amd64-cpython-310/Release/cuda_ext/fused_conv_relu_pool.obj	b49e4097f7dcc98f

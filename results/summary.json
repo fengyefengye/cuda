@@ -1,0 +1,166 @@
+{
+  "meta": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "batch_sizes": [
+      1,
+      32,
+      128
+    ],
+    "warmup": 20,
+    "iters": 100,
+    "seed": 42,
+    "torch_version": "2.0.1+cu117",
+    "torch_cuda_version": "11.7"
+  },
+  "build_info": {
+    "compile_enabled": "True",
+    "compile_backend_used": "torch.jit.script",
+    "compile_error": "RuntimeError('Windows not yet supported for torch.compile') | fallback=torch.jit.script",
+    "fused_extension_loaded": "True",
+    "fused_extension_import_error": null,
+    "fused_extension_build_error": null
+  },
+  "correctness": {
+    "eager": {
+      "max_abs_err": 0.0,
+      "relative_err": 0.0,
+      "within_threshold": 1.0
+    },
+    "compile": {
+      "max_abs_err": 0.0,
+      "relative_err": 0.0,
+      "within_threshold": 1.0
+    },
+    "fused": {
+      "max_abs_err": 2.9802322387695312e-08,
+      "relative_err": 1.5788831676642744e-07,
+      "within_threshold": 1.0
+    }
+  },
+  "benchmarks": {
+    "1": {
+      "eager": {
+        "mean_ms": 2.381917130947113,
+        "median_ms": 2.3884799480438232,
+        "p95_ms": 3.0250864148139955,
+        "p99_ms": 3.290797417163849,
+        "std_ms": 0.3630208285848057,
+        "min_ms": 1.0836479663848877,
+        "max_ms": 3.3269760608673096,
+        "throughput_samples_per_s": 418.67632207630834,
+        "peak_memory_mb": 8.90966796875,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "compile": {
+        "mean_ms": 1.9608521604537963,
+        "median_ms": 1.920527994632721,
+        "p95_ms": 2.5280511379241943,
+        "p99_ms": 2.7728792500495913,
+        "std_ms": 0.30498165405683475,
+        "min_ms": 1.3455359935760498,
+        "max_ms": 2.8631041049957275,
+        "throughput_samples_per_s": 520.690144999026,
+        "peak_memory_mb": 8.90966796875,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "fused": {
+        "mean_ms": 2.0741344022750856,
+        "median_ms": 2.057215929031372,
+        "p95_ms": 2.7458878993988036,
+        "p99_ms": 2.950409367084504,
+        "std_ms": 0.3409031026057487,
+        "min_ms": 1.3424639701843262,
+        "max_ms": 3.1825919151306152,
+        "throughput_samples_per_s": 486.0938445439921,
+        "peak_memory_mb": 8.89111328125,
+        "iters": 100.0,
+        "warmup": 20.0
+      }
+    },
+    "32": {
+      "eager": {
+        "mean_ms": 2.387698868513107,
+        "median_ms": 2.3870240449905396,
+        "p95_ms": 2.8685408353805544,
+        "p99_ms": 3.082342450618748,
+        "std_ms": 0.3037303452181624,
+        "min_ms": 1.7274880409240723,
+        "max_ms": 3.802112102508545,
+        "throughput_samples_per_s": 13405.813848903572,
+        "peak_memory_mb": 10.14306640625,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "compile": {
+        "mean_ms": 1.8365983974933624,
+        "median_ms": 1.7699840068817139,
+        "p95_ms": 2.353734445571899,
+        "p99_ms": 2.5469952487945577,
+        "std_ms": 0.26650942122639587,
+        "min_ms": 1.3005759716033936,
+        "max_ms": 2.982912063598633,
+        "throughput_samples_per_s": 18079.25940323964,
+        "peak_memory_mb": 10.14306640625,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "fused": {
+        "mean_ms": 1.8300879895687103,
+        "median_ms": 1.7976319789886475,
+        "p95_ms": 2.3042559027671814,
+        "p99_ms": 2.533304283618928,
+        "std_ms": 0.25029504065513797,
+        "min_ms": 1.3189120292663574,
+        "max_ms": 2.7289600372314453,
+        "throughput_samples_per_s": 17801.196448453975,
+        "peak_memory_mb": 9.52880859375,
+        "iters": 100.0,
+        "warmup": 20.0
+      }
+    },
+    "128": {
+      "eager": {
+        "mean_ms": 2.477871047258377,
+        "median_ms": 2.41920006275177,
+        "p95_ms": 3.2015968561172485,
+        "p99_ms": 3.5984644103050245,
+        "std_ms": 0.393535494319998,
+        "min_ms": 1.619968056678772,
+        "max_ms": 3.8360960483551025,
+        "throughput_samples_per_s": 52910.051537616,
+        "peak_memory_mb": 13.96337890625,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "compile": {
+        "mean_ms": 1.9370787167549133,
+        "median_ms": 1.9097599983215332,
+        "p95_ms": 2.470963180065155,
+        "p99_ms": 2.5506202387809775,
+        "std_ms": 0.2818504666491011,
+        "min_ms": 1.2985919713974,
+        "max_ms": 2.939903974533081,
+        "throughput_samples_per_s": 67024.12874523384,
+        "peak_memory_mb": 13.96337890625,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "fused": {
+        "mean_ms": 2.076594879627228,
+        "median_ms": 2.0362240076065063,
+        "p95_ms": 2.6020848035812376,
+        "p99_ms": 2.837339947223666,
+        "std_ms": 0.30915983127551355,
+        "min_ms": 1.32915198802948,
+        "max_ms": 3.327967882156372,
+        "throughput_samples_per_s": 62861.45312197674,
+        "peak_memory_mb": 11.50634765625,
+        "iters": 100.0,
+        "warmup": 20.0
+      }
+    }
+  }
+}
