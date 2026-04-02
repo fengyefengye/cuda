@@ -15,8 +15,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--warmup", type=int, default=20)
     parser.add_argument("--iters", type=int, default=100)
-    parser.add_argument("--modes", type=str, default="eager,compile,fused")
+    parser.add_argument("--modes", type=str, default="eager,compile,fused,eager_graph,fused_graph")
     parser.add_argument("--out-dir", type=str, default="results/nsys")
+    parser.add_argument("--enable-cudagraph", action="store_true")
+    parser.add_argument("--cudagraph-warmup", type=int, default=3)
+    parser.add_argument("--fuse-second-block", action="store_true")
     return parser.parse_args()
 
 
@@ -64,6 +67,11 @@ def main() -> int:
             "--results-dir",
             str(out_dir / "bench_results" / mode),
         ]
+
+        if args.enable_cudagraph:
+            profile_cmd.extend(["--enable-cudagraph", "--cudagraph-warmup", str(args.cudagraph_warmup)])
+        if args.fuse_second_block:
+            profile_cmd.append("--fuse-second-block")
 
         prof = _run(profile_cmd)
         print(prof.stdout)

@@ -190,6 +190,21 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--compile-backend", type=str, default="")
     parser.add_argument("--compile-mode", type=str, default="default")
+    parser.add_argument("--enable-cudagraph", action="store_true", help="add *_graph modes via CUDA graph capture")
+    parser.add_argument("--cudagraph-warmup", type=int, default=3, help="warmup iterations before CUDA graph capture")
+    parser.add_argument(
+        "--fuse-second-block",
+        dest="fuse_second_block",
+        action="store_true",
+        help="in fused mode, use custom CUDA fused op for both conv blocks (default: enabled)",
+    )
+    parser.add_argument(
+        "--no-fuse-second-block",
+        dest="fuse_second_block",
+        action="store_false",
+        help="disable second-block fusion in fused mode",
+    )
+    parser.set_defaults(fuse_second_block=True)
 
     parser.add_argument("--build-extension-if-missing", action="store_true")
     parser.add_argument("--no-try-load-extension", action="store_true")
@@ -212,6 +227,9 @@ def main() -> int:
         compile_mode=args.compile_mode or None,
         try_load_extension=not args.no_try_load_extension,
         build_extension_if_missing=args.build_extension_if_missing,
+        fuse_second_block=args.fuse_second_block,
+        enable_cudagraph=args.enable_cudagraph,
+        cudagraph_warmup=args.cudagraph_warmup,
     )
 
     selected_modes = _select_modes(models.keys(), args.modes)

@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "batch_sizes": [
+      1,
+      32,
+      128
+    ],
+    "warmup": 20,
+    "iters": 100,
+    "seed": 42,
+    "torch_version": "2.0.1+cu117",
+    "torch_cuda_version": "11.7"
+  },
+  "build_info": {
+    "compile_enabled": "True",
+    "compile_backend_used": "torch.jit.script",
+    "compile_error": "RuntimeError('Windows not yet supported for torch.compile') | fallback=torch.jit.script",
+    "fused_extension_loaded": "True",
+    "fused_extension_import_error": null,
+    "fused_extension_build_error": null,
+    "fused_second_block": "True",
+    "cudagraph_enabled": "True",
+    "cudagraph_warmup": "3"
+  },
+  "correctness": {
+    "eager": {
+      "max_abs_err": 0.0,
+      "relative_err": 0.0,
+      "within_threshold": 1.0
+    },
+    "compile": {
+      "max_abs_err": 0.0,
+      "relative_err": 0.0,
+      "within_threshold": 1.0
+    },
+    "fused": {
+      "max_abs_err": 3.166496753692627e-08,
+      "relative_err": 1.8377491770368647e-07,
+      "within_threshold": 1.0
+    },
+    "eager_graph": {
+      "max_abs_err": 0.0,
+      "relative_err": 0.0,
+      "within_threshold": 1.0
+    },
+    "compile_graph": {
+      "max_abs_err": 0.0,
+      "relative_err": 0.0,
+      "within_threshold": 1.0
+    },
+    "fused_graph": {
+      "max_abs_err": 3.166496753692627e-08,
+      "relative_err": 1.8377491770368647e-07,
+      "within_threshold": 1.0
+    }
+  },
+  "benchmarks": {
+    "1": {
+      "fused": {
+        "mean_ms": 0.184118719920516,
+        "median_ms": 0.1547359973192215,
+        "p95_ms": 0.3237039908766744,
+        "p99_ms": 0.47998785167932656,
+        "std_ms": 0.09052644934447912,
+        "min_ms": 0.11404799669981003,
+        "max_ms": 0.7639039754867554,
+        "throughput_samples_per_s": 6462.6203166997575,
+        "peak_memory_mb": 41.478515625,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "fused_graph": {
+        "mean_ms": 0.05764704009518027,
+        "median_ms": 0.043007999658584595,
+        "p95_ms": 0.11803680211305617,
+        "p99_ms": 0.2193817596137525,
+        "std_ms": 0.03611209626255965,
+        "min_ms": 0.028672000393271446,
+        "max_ms": 0.24371199309825897,
+        "throughput_samples_per_s": 23251.488279818088,
+        "peak_memory_mb": 49.5693359375,
+        "iters": 100.0,
+        "warmup": 20.0
+      }
+    },
+    "32": {
+      "fused": {
+        "mean_ms": 0.1592342407256365,
+        "median_ms": 0.1372160017490387,
+        "p95_ms": 0.2772991895675659,
+        "p99_ms": 0.44498944848775945,
+        "std_ms": 0.070509337385085,
+        "min_ms": 0.1013759970664978,
+        "max_ms": 0.6031360030174255,
+        "throughput_samples_per_s": 233208.9522512573,
+        "peak_memory_mb": 49.8828125,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "fused_graph": {
+        "mean_ms": 0.06296480029821395,
+        "median_ms": 0.053247999399900436,
+        "p95_ms": 0.10787839926779268,
+        "p99_ms": 0.16943104505538964,
+        "std_ms": 0.025725150714583887,
+        "min_ms": 0.04505600035190582,
+        "max_ms": 0.21606400609016418,
+        "throughput_samples_per_s": 600961.5452343142,
+        "peak_memory_mb": 57.9375,
+        "iters": 100.0,
+        "warmup": 20.0
+      }
+    },
+    "128": {
+      "fused": {
+        "mean_ms": 0.24214208006858826,
+        "median_ms": 0.2165760025382042,
+        "p95_ms": 0.36572158932685833,
+        "p99_ms": 0.5818470579385758,
+        "std_ms": 0.06779154558672099,
+        "min_ms": 0.2099200040102005,
+        "max_ms": 0.6031360030174255,
+        "throughput_samples_per_s": 591016.5415368247,
+        "peak_memory_mb": 59.08203125,
+        "iters": 100.0,
+        "warmup": 20.0
+      },
+      "fused_graph": {
+        "mean_ms": 0.06023455955088139,
+        "median_ms": 0.05259199999272823,
+        "p95_ms": 0.08094719760119914,
+        "p99_ms": 0.10196991711854965,
+        "std_ms": 0.01549212783053052,
+        "min_ms": 0.0480320006608963,
+        "max_ms": 0.16076800227165222,
+        "throughput_samples_per_s": 2433830.240677256,
+        "peak_memory_mb": 66.81591796875,
+        "iters": 100.0,
+        "warmup": 20.0
+      }
+    }
+  }
+}

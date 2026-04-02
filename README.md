@@ -5,8 +5,9 @@ This project compares three inference execution paths on the same LeNet model:
 1. PyTorch eager mode (baseline)
 2. PyTorch `torch.compile` mode
 3. Custom CUDA fused op mode (fused first block: Conv + ReLU + Pool)
+4. CUDA Graph replay mode (`*_graph`) to reduce launch/scheduling overhead
 
-The purpose is to make the launch-overhead and intermediate-memory traffic differences visible with a reproducible benchmark.
+The purpose is to make launch overhead, scheduling gaps, and intermediate-memory traffic differences visible with a reproducible benchmark.
 
 ## Project layout
 
@@ -57,6 +58,26 @@ $env:ALLOW_CUDA_MISMATCH='1'; python setup.py build_ext --inplace
 python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100
 ```
 
+Recommended command for small-batch latency studies (adds CUDA Graph modes):
+
+```powershell
+python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100 --enable-cudagraph
+```
+
+Fused mode now covers both convolution blocks by default.
+
+If you want to disable second-block fusion for ablation:
+
+```powershell
+python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100 --no-fuse-second-block
+```
+
+You can combine both knobs:
+
+```powershell
+python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100 --enable-cudagraph --fuse-second-block
+```
+
 If you want to run with a specific conda environment (example: `hamer`):
 
 ```powershell
@@ -81,3 +102,4 @@ pytest -q
 - If `torch.compile` fails due environment constraints, the script records the failure reason and falls back to eager execution for that path.
 - On Windows with older PyTorch versions (for example 2.0.x), `torch.compile` may be unsupported. The benchmark then falls back to `torch.jit.script` for graph-mode comparison.
 - If custom CUDA extension is unavailable, fused model falls back to an equivalent PyTorch implementation and reports extension status.
+- `*_graph` modes require CUDA and fixed-shape execution; benchmark already uses fixed-shape inputs per batch size.
