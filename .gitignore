@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.obj
+*.exp
+*.lib
+*.dll
+*.pdb
+*.ninja
+
+# CUDA extension binaries at repo root
+fused_conv_relu_pool_cuda.cp*-win_amd64.pyd
+
+# Download/cache folders
+download/
+.conda/
+.pytest_cache/
+
+# Editor/system
+.vscode/
+*.log

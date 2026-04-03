@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "device": "cuda",
+    "dtype": "torch.float32",
+    "batch_sizes": [
+      1
+    ],
+    "warmup": 3,
+    "iters": 10,
+    "seed": 42,
+    "torch_version": "2.5.1+cu121",
+    "torch_cuda_version": "12.1"
+  },
+  "build_info": {
+    "compile_enabled": "True",
+    "compile_backend_used": "torch.compile",
+    "compile_error": null,
+    "fused_extension_loaded": "True",
+    "fused_extension_import_error": null,
+    "fused_extension_build_error": null,
+    "fused_second_block": "True",
+    "cudagraph_enabled": "False",
+    "cudagraph_warmup": "3"
+  },
+  "correctness": {},
+  "benchmarks": {
+    "1": {
+      "eager": {
+        "mean_ms": 0.3127999991178513,
+        "median_ms": 0.30430400371551514,
+        "p95_ms": 0.38103039413690565,
+        "p99_ms": 0.38176766902208326,
+        "std_ms": 0.04687000449002353,
+        "min_ms": 0.2457599937915802,
+        "max_ms": 0.3819519877433777,
+        "throughput_samples_per_s": 3286.18745658986,
+        "peak_memory_mb": 9.8759765625,
+        "iters": 10.0,
+        "warmup": 3.0
+      },
+      "compile": {
+        "mean_ms": 0.9110592067241668,
+        "median_ms": 0.8965120017528534,
+        "p95_ms": 0.9672352075576782,
+        "p99_ms": 0.9845382452011109,
+        "std_ms": 0.03496452117043719,
+        "min_ms": 0.8785279989242554,
+        "max_ms": 0.988864004611969,
+        "throughput_samples_per_s": 1115.4340355118588,
+        "peak_memory_mb": 9.87451171875,
+        "iters": 10.0,
+        "warmup": 3.0
+      }
+    }
+  }
+}
