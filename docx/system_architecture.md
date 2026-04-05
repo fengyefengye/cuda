@@ -1,211 +1,174 @@
-# CUDA Benchmark System Architecture and Design Rationale
+以下是该文档的中文翻译：
 
-## 1. What this system is solving
+# CUDA 基准测试系统架构与设计原理
 
-The project evaluates multiple GPU inference execution strategies on the same LeNet workload and
-produces directly comparable latency and throughput reports.
+## 1. 系统解决的问题
 
-Primary goals:
+本项目在相同的 LeNet 工作负载上评估多种 GPU 推理执行策略，并生成具有直接可比性的延迟（Latency）和吞吐量（Throughput）报告。
 
-- Compare execution backends under identical model weights and inputs.
-- Isolate algorithm/backend gains from launch/scheduling gains.
-- Keep experiments reproducible and diagnosable.
+**主要目标：**
+- 在完全相同的模型权重和输入下，比较不同执行后端的性能。
+- 将算法/后端带来的收益与启动/调度（Launch/Scheduling）带来的收益隔离开来。
+- 确保实验的可复现性和可诊断性。
 
-Non-goals:
+**非目标：**
+- 训练优化。
+- 任意形状的动态形状运行时服务。
+- 通用模型库（Model Zoo）支持。
 
-- Training optimization.
-- Dynamic-shape runtime serving at arbitrary shapes.
-- General-purpose model zoo support.
+## 2. 架构原则
 
-## 2. Architectural principles
+1. **关注点分离**
+   - 基准测试编排、模型构建、CUDA 扩展加载、内核代码和报告格式化被拆分为独立的模块。
 
-1. Separation of concerns
-- Benchmark orchestration, model construction, CUDA extension loading, kernel code, and report formatting are split into independent modules.
+2. **渐进式可靠性而非硬性故障**
+   - 缺少编译支持或扩展不可用时不应默认导致测试崩溃。
+   - 系统会在输出元数据中记录降级（Fallback）决策。
 
-2. Progressive reliability over hard failure
-- Missing compile support or extension availability should not crash benchmark runs by default.
-- The system records fallback decisions in output metadata.
+3. **正交的优化维度**
+   - 后端优化（Eager vs Compile vs Fused）是一个轴。
+   - 调度优化（Graph Replay vs Non-graph）是另一个轴。
+   - 这实现了有意义的 A/B 测试对比。
 
-3. Orthogonal optimization dimensions
-- Backend optimization (eager vs compile vs fused) is one axis.
-- Scheduling optimization (graph replay vs non-graph) is another axis.
-- This allows meaningful A/B comparisons.
+4. **可复现性与可观测性**
+   - 使用确定性随机种子和一致的预热/测量循环。
+   - 在 `build_info` 中明确输出构建和运行时状态。
 
-4. Reproducibility and observability
-- Deterministic seeds and consistent warmup/measurement loops.
-- Explicit build and runtime status emitted in `build_info`.
+## 3. 分层系统视图
 
-## 3. Layered system view
+**A 层：CLI 与实验编排**
+- 文件：`bench/benchmark.py`
+- 职责：解析实验选项、解析运行时设备、构建模型变体、运行正确性验证和计时循环、输出 JSON/Markdown 结果。
 
-Layer A: CLI and experiment orchestration
-- File: bench/benchmark.py
-- Responsibilities:
-  - Parse experiment options.
-  - Resolve runtime device.
-  - Build model variants.
-  - Run correctness and timed loops.
-  - Emit JSON/Markdown outputs.
+**B 层：变体工厂与执行封装**
+- 文件：`bench/models.py`
+- 职责：定义 Eager 基准模型 (`LeNetEager`)、定义融合模型 (`LeNetFused`)、构建编译变体及降级方案、将任意变体封装在 CUDA Graph 中 (`CUDAGraphModule`)。
 
-Layer B: Variant factory and execution wrappers
-- File: bench/models.py
-- Responsibilities:
-  - Define eager baseline model (`LeNetEager`).
-  - Define fused model (`LeNetFused`).
-  - Build compile variant and fallbacks.
-  - Wrap any variant in CUDA Graph (`CUDAGraphModule`).
+**C 层：扩展边界与运行时加载器**
+- 文件：`bench/cuda_ops.py`
+- 职责：导入扩展并处理 Windows DLL 路径、根据配置可选地进行 JIT 构建扩展、暴露融合算子调用和扩展状态。
 
-Layer C: Extension boundary and runtime loader
-- File: bench/cuda_ops.py
-- Responsibilities:
-  - Import extension and handle Windows DLL paths.
-  - Optionally JIT-build extension if configured.
-  - Expose fused op call and extension status.
+**D 层：原生扩展接口**
+- 文件：`cuda_ext/fused_conv_relu_pool_bindings.cpp`
+- 职责：验证张量属性和形状约束、将 Python 入口点绑定到 CUDA 内核启动器。
 
-Layer D: Native extension interface
-- File: cuda_ext/fused_conv_relu_pool_bindings.cpp
-- Responsibilities:
-  - Validate tensor properties and shape constraints.
-  - Bind Python entrypoint to CUDA kernel launcher.
+**E 层：CUDA 内核实现**
+- 文件：`cuda_ext/fused_conv_relu_pool.cu`
+- 职责：单内核 Conv + ReLU + Pool 前向路径、输出张量生成和启动检查。
 
-Layer E: CUDA kernel implementation
-- File: cuda_ext/fused_conv_relu_pool.cu
-- Responsibilities:
-  - Single-kernel Conv + ReLU + Pool forward path.
-  - Output tensor generation and launch checks.
+**F 层：构建与打包胶水**
+- 文件：`setup.py`
+- 职责：定义扩展源码列表和编译标志、支持可选的 CUDA 版本不匹配覆盖。
 
-Layer F: Build and packaging glue
-- File: setup.py
-- Responsibilities:
-  - Define extension source list and compile flags.
-  - Support optional CUDA version mismatch override.
+**G 层：环境检查与分析助手**
+- 文件：`bench/env_check.py`, `bench/profile_nsys.py`
+- 职责：验证先决条件（`torch`, CUDA, nvcc, cl）、通过 Nsight Systems 收集内核时间线统计数据。
 
-Layer G: Environment checks and profiling helpers
-- Files: bench/env_check.py, bench/profile_nsys.py
-- Responsibilities:
-  - Validate prerequisites (`torch`, CUDA, nvcc, cl).
-  - Collect kernel timeline stats with Nsight Systems.
+**H 层：测试验证**
+- 文件：`tests/test_correctness.py`, `tests/test_smoke_infer.py`
+- 职责：在容差约束下验证相对于 Eager 基准的正确性、覆盖包括 Graph 变体在内的所有模式。
 
-Layer H: Test verification
-- Files: tests/test_correctness.py, tests/test_smoke_infer.py
-- Responsibilities:
-  - Correctness vs eager baseline under tolerance constraints.
-  - Smoke coverage for all modes including graph variants.
+## 4. 端到端运行时流程
 
-## 4. End-to-end runtime flow
-
-1. Input options are parsed (modes, batch sizes, warmup/iters, graph switch).
-2. `build_model_variants` creates model dictionary:
+1. 解析输入选项（模式、批大小、预热/迭代次数、Graph 开关）。
+2. `build_model_variants` 创建模型字典：
    - eager
-   - compile (or fallback)
-   - fused (extension path or fallback)
-   - optional graph-wrapped versions
-3. Correctness check compares outputs to eager baseline.
-4. Benchmark loop runs per mode and batch:
-   - warmup
-   - synchronized timing
-   - latency distribution statistics
-5. Export:
-   - summary.json (structured)
-   - summary.md (table)
+   - compile（或降级方案）
+   - fused（扩展路径或降级方案）
+   - 可选的 Graph 封装版本
+3. 正确性检查：对比输出与 Eager 基线。
+4. 按模式和批次运行基准测试循环：
+   - 预热。
+   - 同步计时。
+   - 延迟分布统计。
+5. 导出：
+   - `summary.json`（结构化数据）。
+   - `summary.md`（表格形式）。
 
-## 5. Why modes are designed this way
+## 5. 模式设计意图
 
-Base modes:
+**基础模式：**
+- **eager**: 纯 PyTorch Eager 基准线。
+- **compile**: 图/编译器优化路径。
+- **fused**: 自定义算子路径，减少内核数量和中间内存传输。
 
-- eager: pure PyTorch eager baseline.
-- compile: graph/compiler optimization path.
-- fused: custom operator path reducing kernel count and intermediate memory traffic.
+**图模式 (`*_graph`)：**
+- 保持后端语义不变。
+- 用图形重放（Graph Replay）取代重复的启动编排。
+- 独立于后端差异，测量启动/调度开销的减少。
 
-Graph modes (`*_graph`):
+**这种双轴组合实现了如下分析：**
+- `compile` vs `eager`: 编译器优化收益。
+- `fused` vs `compile`: 自定义内核收益。
+- `compile_graph` vs `compile`: 调度开销减少收益。
+- `fused_graph` vs `fused`: 内核融合后的调度收益。
 
-- Keep backend semantics unchanged.
-- Replace repeated launch orchestration with graph replay.
-- Measure launch/scheduling reductions independently from backend differences.
+## 6. 降级策略与故障隔离
 
-This two-axis composition enables analyses like:
+**编译降级链：**
+1. 尝试 `torch.compile`。
+2. 若不可用或失败，尝试 `torch.jit.script`。
+3. 若仍失败，保持兼容 Eager 的执行。
 
-- `compile` vs `eager`: compiler optimization gain.
-- `fused` vs `compile`: custom kernel gain.
-- `compile_graph` vs `compile`: scheduling overhead gain.
-- `fused_graph` vs `fused`: scheduling gain after kernel fusion.
+**融合降级行为：**
+- 若扩展导入和链接正确，使用 CUDA 融合算子。
+- 否则，在模型前向传播中降级为等效的 PyTorch 算子。
 
-## 6. Fallback strategy and failure containment
+所有结果都会反映在 `build_info` 中，确保实验报告具有可解释性。
 
-Compile fallback chain:
+## 7. 测量设计选择
 
-1. Try `torch.compile`.
-2. If unavailable or failing, try `torch.jit.script`.
-3. If still failing, keep eager-compatible execution.
+**计时方法：**
+- GPU：CUDA Event + 流同步（Stream Sync）。
+- CPU 降级：挂钟时间（Wall-clock timing）。
+- 在正式迭代收集前进行预热。
 
-Fused fallback behavior:
+**报告指标：**
+- 延迟的均值、中位数、P95、P99、标准差、最小值、最大值。
+- 基于中位数延迟计算的吞吐量。
+- 峰值分配的 CUDA 内存。
 
-- If extension imports and links correctly, use CUDA fused op.
-- Otherwise fallback to equivalent PyTorch ops in model forward.
+**设计理由：**
+- 中位数和 P95/P99 同时描述了集中趋势和尾部稳定性。
+- 峰值内存有助于识别不同模式之间的性能-内存权衡。
 
-All outcomes are reflected in `build_info`, so experiment reports remain explainable.
+## 8. 输出数据契约
 
-## 7. Measurement design choices
+`summary.json` 字段说明：
+- `meta`: 执行环境和运行设置。
+- `build_info`: 后端/降级/扩展/Graph 的运行时状态。
+- `correctness`: 相对于 Eager 基准的数值误差。
+- `benchmarks`: 每个批次、每种模式的指标集。
 
-Timing methodology:
+该契约足够稳定，可用于下游绘图脚本和回归对比。
 
-- GPU: CUDA events + stream sync.
-- CPU fallback: wall-clock timing.
-- Warmup before official iteration collection.
+## 9. 扩展点
 
-Reported metrics:
+**添加新的后端模式：**
+1. 在 `bench/models.py` 中实现模型变体。
+2. 在 `build_model_variants` 字典中注册。
+3. 可选地通过现有封装路径添加 Graph 支持。
+4. 无需更改结构即可复用基准测试和报告流水线。
 
-- mean, median, p95, p99, std, min, max latency.
-- throughput based on median latency.
-- peak allocated CUDA memory.
+**添加新的融合算子：**
+1. 添加 C++ 绑定和 CUDA 内核源码。
+2. 在 `bench/cuda_ops.py` 中暴露加载器入口。
+3. 在模型变体中集成调用路径。
+4. 添加正确性和冒烟测试。
 
-Reasoning:
+**添加新指标：**
+- 扩展基准测试计时函数中的指标字典。
+- 扩展 Markdown 生成器的列。
 
-- Median and p95/p99 describe both central tendency and tail stability.
-- Peak memory helps identify performance-memory tradeoffs between modes.
+## 10. 当前权衡与未来改进
 
-## 8. Data contract of outputs
+**当前权衡：**
+- CUDA Graph 路径假设每个捕获的签名具有固定形状。
+- Windows 运行时可能需要特定的环境变量以保证 Inductor 的稳定性。
+- 融合内核目前仅针对 float32 前向路径。
 
-`summary.json` fields:
-
-- `meta`: execution environment and run settings.
-- `build_info`: backend/fallback/extension/graph runtime status.
-- `correctness`: numeric error vs eager baseline.
-- `benchmarks`: per-batch per-mode metric sets.
-
-This contract is stable enough for downstream plotting scripts and regression comparisons.
-
-## 9. Extensibility points
-
-Add a new backend mode:
-
-1. Implement model variant in bench/models.py.
-2. Register it in `build_model_variants` dictionary.
-3. Optionally add graph wrapping via existing wrapper path.
-4. Reuse benchmark and report pipeline without structural changes.
-
-Add a new fused operator:
-
-1. Add C++ binding and CUDA kernel source.
-2. Expose loader entry in bench/cuda_ops.py.
-3. Integrate call path in model variant.
-4. Add correctness and smoke tests.
-
-Add new metrics:
-
-- Extend metric dict in benchmark timing function.
-- Extend markdown writer columns.
-
-## 10. Current tradeoffs and future improvements
-
-Current tradeoffs:
-
-- CUDA Graph path assumes fixed shape per captured signature.
-- Windows runtime may need specific environment variables for inductor stability.
-- Fused kernel currently targets float32 forward path.
-
-Recommended next improvements:
-
-1. Add automated environment preflight and compatibility warnings at benchmark startup.
-2. Add optional auto-tuning and more detailed kernel occupancy diagnostics.
-3. Extend fused kernels to additional dtypes and model blocks.
-4. Add CI-level regression checks against baseline medians/p95.
+**建议的后续改进：**
+1. 在基准测试启动时添加自动环境预检和兼容性警告。
+2. 增加可选的自动调优（Auto-tuning）和更详细的内核占用率（Occupancy）诊断。
+3. 将融合内核扩展到更多数据类型和模型模块。
+4. 针对基准线的中位数/P95 增加 CI 级别的回归检查。

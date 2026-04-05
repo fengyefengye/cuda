@@ -71,6 +71,46 @@ $env:ALLOW_CUDA_MISMATCH='1'; python setup.py build_ext --inplace
 python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100
 ```
 
+### 一键快速启动（1 到 1024 + 画图分析）
+
+最简命令（推荐）：
+
+```powershell
+.\run_full_experiment.cmd
+```
+
+等价命令：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\quick_start_1to1024.ps1
+```
+
+可选：先重编译扩展再跑
+
+```powershell
+.\run_full_experiment.cmd -RebuildExtension
+```
+
+等价命令：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\quick_start_1to1024.ps1 -RebuildExtension
+```
+
+该脚本会自动执行两组实验（`fuse_second_block` 开/关），并在 `results/analysis_<tag>_1to1024` 下输出：
+
+* `latency_eager_fused.png`
+* `speedup_compare.png`
+* `analysis.md`
+
+---
+
+### 独立画图分析（已有两个 summary.json 时）
+
+```powershell
+python -m bench.plot_analysis --run-a results/full_experiment_20260405_1to1024_fuse2_on/summary.json --run-b results/full_experiment_20260405_1to1024_fuse2_off/summary.json --label-a fuse2_on --label-b fuse2_off --out-dir results/analysis_20260405_1to1024
+```
+
 ---
 
 ### 小 batch 延迟分析（推荐，包含 CUDA Graph）
