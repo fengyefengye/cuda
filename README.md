@@ -1,105 +1,208 @@
-# LeNet Execution Benchmark (Eager vs Compile vs Custom CUDA)
+# LeNet 执行性能基准（Eager vs Compile vs 自定义 CUDA）
 
-This project compares three inference execution paths on the same LeNet model:
+本项目在同一个 LeNet 模型上，对比三种（扩展为四种）推理执行路径：
 
-1. PyTorch eager mode (baseline)
-2. PyTorch `torch.compile` mode
-3. Custom CUDA fused op mode (fused first block: Conv + ReLU + Pool)
-4. CUDA Graph replay mode (`*_graph`) to reduce launch/scheduling overhead
+1. PyTorch Eager 模式（基线）
+2. PyTorch `torch.compile` 模式
+3. 自定义 CUDA 融合算子模式（融合第一块：Conv + ReLU + Pool）
+4. CUDA Graph 重放模式（`*_graph`），用于减少 launch / 调度开销
 
-The purpose is to make launch overhead, scheduling gaps, and intermediate-memory traffic differences visible with a reproducible benchmark.
+项目目标是通过**可复现的基准测试**，清晰展示：
 
-## Project layout
+* kernel launch 开销
+* 调度间隙（scheduling gaps）
+* 中间内存访问流量（intermediate memory traffic）
 
-- `bench/`: benchmark scripts and model code
-- `cuda_ext/`: C++/CUDA extension source
-- `tests/`: correctness and smoke tests
-- `results/`: generated benchmark reports
-- `setup.py`: build script for CUDA extension
+---
 
-## Requirements
+## 项目结构
 
-- Windows + NVIDIA GPU
-- CUDA Toolkit installed (`nvcc` available)
-- Visual Studio Build Tools with C++ toolchain (`cl.exe` available)
-- Python 3.10+ recommended
-- PyTorch with CUDA support
+* `bench/`：基准测试脚本与模型代码
+* `cuda_ext/`：C++ / CUDA 扩展源码
+* `tests/`：正确性与基础测试
+* `results/`：生成的基准报告
+* `setup.py`：CUDA 扩展构建脚本
 
-## Quick start
+---
 
-1. Install dependencies:
+## 环境要求
+
+* Windows + NVIDIA GPU
+* 已安装 CUDA Toolkit（`nvcc` 可用）
+* Visual Studio Build Tools（包含 C++ 编译器 `cl.exe`）
+* Python 3.10+（推荐）
+* 支持 CUDA 的 PyTorch
+
+---
+
+## 快速开始
+
+### 1. 安装依赖
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-2. Run environment check:
+### 2. 运行环境检查
 
 ```powershell
 python -m bench.env_check
 ```
 
-3. Build CUDA extension (optional but recommended for fused mode):
+---
+
+### 3. 构建 CUDA 扩展（可选但推荐）
 
 ```powershell
 python setup.py build_ext --inplace
 ```
 
-If your PyTorch wheel CUDA version differs from local CUDA toolkit version,
-you can explicitly opt in to build attempt:
+如果你的 PyTorch CUDA 版本与本地 CUDA Toolkit 不一致，可以强制尝试构建：
 
 ```powershell
 $env:ALLOW_CUDA_MISMATCH='1'; python setup.py build_ext --inplace
 ```
 
-4. Run benchmark:
+---
+
+### 4. 运行基准测试
 
 ```powershell
 python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100
 ```
 
-Recommended command for small-batch latency studies (adds CUDA Graph modes):
+---
+
+### 小 batch 延迟分析（推荐，包含 CUDA Graph）
 
 ```powershell
 python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100 --enable-cudagraph
 ```
 
-Fused mode now covers both convolution blocks by default.
+---
 
-If you want to disable second-block fusion for ablation:
+### 融合策略控制
+
+默认情况下会融合两个卷积块。
+
+关闭第二块融合（用于消融实验）：
 
 ```powershell
 python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100 --no-fuse-second-block
 ```
 
-You can combine both knobs:
+同时开启 CUDA Graph + 第二块融合：
 
 ```powershell
 python -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100 --enable-cudagraph --fuse-second-block
 ```
 
-If you want to run with a specific conda environment (example: `hamer`):
+---
+
+### 使用指定 Conda 环境运行（示例）
 
 ```powershell
 C:/Users/fengye/.conda/envs/hamer/python.exe -m bench.benchmark --device cuda --batch-sizes 1,32,128 --warmup 20 --iters 100
 ```
 
-5. Run tests:
+---
+
+### 5. 运行测试
 
 ```powershell
 pytest -q
 ```
 
-## Outputs
+---
 
-- `results/summary.json`: machine-readable benchmark result
-- `results/summary.md`: markdown summary table
+## 架构概览
 
-## Notes
+该项目采用分层设计，使以下部分解耦：
 
-- All modes share the same initial weights for fair comparison.
-- Benchmark uses warmup + synchronized timing to avoid undercounting async GPU execution.
-- If `torch.compile` fails due environment constraints, the script records the failure reason and falls back to eager execution for that path.
-- On Windows with older PyTorch versions (for example 2.0.x), `torch.compile` may be unsupported. The benchmark then falls back to `torch.jit.script` for graph-mode comparison.
-- If custom CUDA extension is unavailable, fused model falls back to an equivalent PyTorch implementation and reports extension status.
-- `*_graph` modes require CUDA and fixed-shape execution; benchmark already uses fixed-shape inputs per batch size.
+* 模型逻辑
+* 后端执行方式
+* kernel 实现
+* 基准调度
+* 报告生成
+
+---
+
+### 执行流程
+
+1. 解析 benchmark 参数，确定 device / dtype
+2. 构建模型变体（`eager`、`compile`、`fused`、可选 `*_graph`）
+3. 与 eager 基线进行正确性校验
+4. 对每种模式与 batch size 执行计时循环
+5. 导出 JSON 和 Markdown 报告
+
+---
+
+### 核心设计原则
+
+* **渐进式回退（progressive fallback）**
+
+  * 优先使用 `torch.compile`
+  * 失败则回退到 `torch.jit.script`
+  * 最终保证 eager 可执行
+
+* **安全的融合路径**
+
+  * 优先使用自定义 CUDA 扩展
+  * 不可用时自动退化为等价 PyTorch 实现
+
+* **正交优化（orthogonal optimization）**
+
+  * CUDA Graph 是独立层（`*_graph`）
+  * 可对所有执行模式统一对比
+
+* **可复现性优先**
+
+  * 共享初始权重
+  * 固定随机种子
+  * warmup + 同步计时
+  * 输出包含构建与运行状态元数据
+
+---
+
+### 详细设计文档
+
+* `docx/system_architecture.md`
+
+---
+
+## 输出结果
+
+* `results/summary.json`：机器可读结果
+* `results/summary.md`：Markdown 汇总表
+
+---
+
+## 注意事项
+
+* 所有模式使用相同初始权重，确保公平对比
+
+* 使用 warmup + 同步计时，避免 GPU 异步执行导致误差
+
+* 若 `torch.compile` 因环境限制失败：
+
+  * 会记录失败原因
+  * 并回退到 eager 模式
+
+* 在 Windows + 较旧 PyTorch（如 2.0.x）上：
+
+  * `torch.compile` 可能不可用
+  * 自动回退到 `torch.jit.script`
+
+* 若 CUDA 扩展不可用：
+
+  * fused 模式退化为 PyTorch 实现
+  * 并在结果中标明状态
+
+* `*_graph` 模式要求：
+
+  * CUDA 环境
+  * 固定输入 shape（本 benchmark 已满足）
+
+---
+
+如果你需要，我可以帮你把这个项目说明**优化成论文风格 / README（更偏开源项目）/ 或加上性能分析解读模板**。
